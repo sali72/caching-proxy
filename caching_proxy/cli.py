@@ -48,6 +48,15 @@ def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
         help="Directory to store cached responses (default: .cache)"
     )
     
+    parser.add_argument(
+        "--no-cache",
+        type=str,
+        nargs="+",
+        default=[],
+        help="List of path patterns that should not be cached. "
+             "Example: --no-cache '/realtime/*' '/api/status'"
+    )
+    
     return parser.parse_args(args)
 
 
@@ -66,9 +75,15 @@ def main(args: Optional[List[str]] = None) -> int:
         target_url = parsed_args.url
         port = parsed_args.port
         cache_dir = parsed_args.cache_dir
+        no_cache_paths = parsed_args.no_cache
         
         # Run the proxy server
-        run_server(target_url=target_url, port=port, cache_dir=cache_dir)
+        run_server(
+            target_url=target_url,
+            port=port,
+            cache_dir=cache_dir,
+            no_cache_paths=no_cache_paths
+        )
         
         return 0
         

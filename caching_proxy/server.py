@@ -1,7 +1,7 @@
 """HTTP Caching Proxy Server using aiohttp."""
 
 import logging
-
+import re
 
 import aiohttp
 from aiohttp import web
@@ -18,16 +18,35 @@ logger = logging.getLogger(__name__)
 class ProxyServer:
     """HTTP proxy server that caches responses."""
 
-    def __init__(self, target_url: str, cache: ResponseCache):
+    def __init__(
+        self, target_url: str, cache: ResponseCache, no_cache_paths: list[str] = None
+    ):
         """
         Initialize the proxy server.
 
         Args:
             target_url: The URL to proxy requests to
             cache: Response cache instance
+            no_cache_paths: List of path patterns that should not be cached
         """
         self.target_url = target_url.rstrip("/")
         self.cache = cache
+        self.no_cache_paths = no_cache_paths or []
+        self.no_cache_patterns = [
+            re.compile(pattern) for pattern in self.no_cache_paths
+        ]
+
+    def should_cache_path(self, path: str) -> bool:
+        """
+        Check if a given path should be cached.
+
+        Args:
+            path: The request path to check
+
+        Returns:
+            bool: True if the path should be cached, False otherwise
+        """
+        return not any(pattern.match(path) for pattern in self.no_cache_patterns)
 
     async def handle_request(self, request: web.Request) -> web.Response:
         """
@@ -44,16 +63,17 @@ class ProxyServer:
         query_string = request.query_string
         headers = dict(request.headers)
 
-        # Try to get from cache for GET requests
-        cached = await self.cache.get(method, path, query_string, headers)
-        if cached:
-            logger.info(f"Serving from cache: {method} {path}")
-            response = web.Response(
-                status=cached["status"],
-                headers={**cached["headers"], "X-Cache": "HIT"},
-                body=cached["content"].encode("utf-8"),
-            )
-            return response
+        # Try to get from cache for GET requests if path is cacheable
+        if method == "GET" and self.should_cache_path(path):
+            cached = await self.cache.get(method, path, query_string, headers)
+            if cached:
+                logger.info(f"Serving from cache: {method} {path}")
+                response = web.Response(
+                    status=cached["status"],
+                    headers={**cached["headers"], "X-Cache": "HIT"},
+                    body=cached["content"].encode("utf-8"),
+                )
+                return response
 
         # Forward the request to the target
         target_url = f"{self.target_url}{path}"
@@ -88,8 +108,12 @@ class ProxyServer:
                     # Add X-Cache header
                     response_headers["X-Cache"] = "MISS"
 
-                    # Cache successful GET responses
-                    if method == "GET" and 200 <= status < 400:
+                    # Cache successful GET responses if path is cacheable
+                    if (
+                        method == "GET"
+                        and 200 <= status < 400
+                        and self.should_cache_path(path)
+                    ):
                         await self.cache.store(
                             method,
                             path,
@@ -117,20 +141,23 @@ class ProxyServer:
             )
 
 
-async def create_app(target_url: str, cache_dir: str = ".cache") -> web.Application:
+async def create_app(
+    target_url: str, cache_dir: str = ".cache", no_cache_paths: list[str] = None
+) -> web.Application:
     """
     Create the aiohttp web application.
 
     Args:
         target_url: Target URL to proxy requests to
         cache_dir: Directory to store cached responses
+        no_cache_paths: List of path patterns that should not be cached
 
     Returns:
         Configured aiohttp application
     """
     # Create cache and proxy instances
     cache = ResponseCache(cache_dir)
-    proxy = ProxyServer(target_url, cache)
+    proxy = ProxyServer(target_url, cache, no_cache_paths)
 
     # Create application
     app = web.Application()
@@ -141,7 +168,12 @@ async def create_app(target_url: str, cache_dir: str = ".cache") -> web.Applicat
     return app
 
 
-def run_server(target_url: str, port: int = 8000, cache_dir: str = ".cache") -> None:
+def run_server(
+    target_url: str,
+    port: int = 8000,
+    cache_dir: str = ".cache",
+    no_cache_paths: list[str] = None,
+) -> None:
     """
     Run the caching proxy server.
 
@@ -149,11 +181,12 @@ def run_server(target_url: str, port: int = 8000, cache_dir: str = ".cache") -> 
         target_url: The URL to proxy requests to
         port: Port to run the server on
         cache_dir: Directory to store cached responses
+        no_cache_paths: List of path patterns that should not be cached
     """
     logger.info(f"Starting caching proxy for {target_url} on port {port}")
 
     # Create and run the web application
     loop = asyncio.get_event_loop()
-    app = loop.run_until_complete(create_app(target_url, cache_dir))
+    app = loop.run_until_complete(create_app(target_url, cache_dir, no_cache_paths))
 
     web.run_app(app, host="0.0.0.0", port=port)
