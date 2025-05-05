@@ -11,6 +11,7 @@ A HTTP caching proxy server that helps reduce load on origin servers and improve
 - ⚡ Async/await based implementation
 - 🔒 Secure header handling
 - 📝 Detailed logging
+- 🧹 Cache clearing functionality
 
 ## 🛠️ Installation
 
@@ -23,32 +24,57 @@ pip install caching-proxy
 Start the proxy server with default settings:
 
 ```bash
-caching-proxy http://example.com
+caching-proxy run http://example.com
 ```
 
-## ⚙️ Configuration Options
+## ⚙️ Commands
 
+### Run Server
+```bash
+caching-proxy run [options] <url>
+```
+
+#### Options
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-p, --port` | Port to run the proxy server on | `8000` |
 | `-c, --cache-dir` | Directory to store cached responses | `.cache` |
 | `--no-cache` | Path patterns that should not be cached | `[]` |
 
+### Clear Cache
+```bash
+caching-proxy clear-cache [options]
+```
+
+#### Options
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-c, --cache-dir` | Directory containing cached responses | `.cache` |
+
 ## 📋 Usage Examples
 
 ### Basic Usage
 ```bash
-caching-proxy http://example.com
+caching-proxy run http://example.com
 ```
 
 ### Custom Port and Cache Directory
 ```bash
-caching-proxy http://example.com --port 8080 --cache-dir .mycache
+caching-proxy run http://example.com --port 8080 --cache-dir .mycache
 ```
 
 ### Exclude Paths from Caching
 ```bash
-caching-proxy http://example.com --no-cache "/realtime/*" "/api/status" "/live/*"
+caching-proxy run http://example.com --no-cache "/realtime/*" "/api/status" "/live/*"
+```
+
+### Clear Cache
+```bash
+# Clear default cache directory
+caching-proxy clear-cache
+
+# Clear specific cache directory
+caching-proxy clear-cache --cache-dir .mycache
 ```
 
 ## 🔍 How It Works
@@ -81,6 +107,7 @@ The proxy server provides detailed logging including:
 - Cache hits/misses
 - Error conditions
 - Server startup/shutdown
+- Cache clearing operations
 
 ## 🤝 Contributing
 

@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Any
@@ -127,4 +128,21 @@ class ResponseCache:
                 json.dump(cache_data, f)
             logger.info(f"Cached response for {method} {path}")
         except Exception as e:
-            logger.error(f"Error caching response: {e}") 
+            logger.error(f"Error caching response: {e}")
+
+    def clear(self) -> None:
+        """
+        Clear all cached responses.
+        
+        This method removes all files from the cache directory.
+        """
+        try:
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(exist_ok=True)
+                logger.info("Cache cleared successfully")
+            else:
+                logger.info("Cache directory does not exist, nothing to clear")
+        except Exception as e:
+            logger.error(f"Error clearing cache: {e}")
+            raise 
