@@ -139,10 +139,8 @@ class ResponseCache:
         try:
             if self.cache_dir.exists():
                 shutil.rmtree(self.cache_dir)
-                self.cache_dir.mkdir(exist_ok=True)
-                logger.info("Cache cleared successfully")
-            else:
-                logger.info("Cache directory does not exist, nothing to clear")
+            self.cache_dir.mkdir(exist_ok=True)
+            logger.info("Cache cleared successfully")
         except Exception as e:
             logger.error(f"Error clearing cache: {e}")
             raise 

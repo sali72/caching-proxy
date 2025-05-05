@@ -70,7 +70,14 @@ def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
         version=f"%(prog)s {__version__}"
     )
     
-    return parser.parse_args(args)
+    # Parse arguments
+    args = parser.parse_args(args)
+    
+    # If no command is provided, set command to None
+    if not hasattr(args, "command"):
+        args.command = None
+        
+    return args
 
 
 def main(args: Optional[List[str]] = None) -> int:

@@ -1,3 +1,3 @@
-"""Caching Proxy CLI Tool."""
+"""Caching Proxy package."""
 
 __version__ = "0.1.0" 
